@@ -29,6 +29,8 @@
     width: 150px; height: 150px;
     filter: drop-shadow(0 8px 16px rgba(0,0,0,0.22));
     transition: transform .15s ease;
+    position: relative;
+    z-index: 1;
   }
   #hvc-launcher:hover { transform: scale(1.05); }
   #hvc-launcher-bubble { width: 100%; height: 100%; display: block; }
@@ -44,8 +46,9 @@
     box-shadow: 0 12px 32px rgba(0,0,0,0.22);
     overflow: hidden;
     position: absolute;
-    bottom: 78px;
+    bottom: 168px;
     right: 0;
+    z-index: 2;
   }
   #hvc-card.open { display: flex; }
 
@@ -232,10 +235,6 @@
       a: "We're open Monday to Friday, 8:30am to 5:30pm. We're closed Saturdays, Sundays, and public holidays."
     },
     {
-      kw: ["emergency", "after hours", "after-hours", "urgent", "outside your hours", "closed and my pet"],
-      a: "We're open Monday to Friday, 8:30am to 5:30pm, and don't provide 24 hour care ourselves. For after hours emergencies, options nearby include Advanced Vet Care in Kensington (03 9092 0400), CARE in Collingwood (03 9417 6417), Animal Referral Hospital in Essendon Fields (03 9379 0700), Lort Smith Animal Hospital in North Melbourne (03 9328 3021), or Bundoora Veterinary Hospital (03 9467 2255)."
-    },
-    {
       kw: ["how many vet", "how many doctor", "vet name", "doctor name", "who is the vet", "who is the doctor", "who are the vet", "who are the doctor", "the doctors", "the vets", "dr rob", "dr kirsty", "who runs"],
       a: "We have two vets, Dr Rob, with over 30 years in the profession, and Dr Kirsty, who graduated from the University of Melbourne in 2010. We also have five nurses on the team."
     },
@@ -265,19 +264,19 @@
     },
     {
       kw: ["vaccination", "vaccine", "c3", "f3", "fiv", "canine cough", "calicivirus", "shots", "booster"],
-      a: "Yes, we vaccinate dogs, cats, and rabbits. Dogs get C3 and Canine Cough vaccinations, cats get F3 and FIV vaccinations, and rabbits get Calicivirus vaccinations, each with its own puppy/kitten schedule and boosters. Give us a call on " + PHONE + " for the exact schedule for your pet's age and species."
+      a: "We vaccinate dogs, cats, and rabbits. Dogs get C3 and Canine Cough vaccinations, cats get F3 and FIV vaccinations, and rabbits get Calicivirus vaccinations, each with its own puppy/kitten schedule and boosters. Give us a call on " + PHONE + " for the exact schedule for your pet's age and species."
     },
     {
       kw: ["x-ray", "xray", "radiograph", "radiography", "broken bone", "fracture"],
-      a: "Yes, we have an in house digital radiography machine. It's used for things like fractures, arthritis, spinal problems, checking for swallowed objects, bladder stones, and assessing hearts and lungs in coughing pets. Some pets need sedation or a general anaesthetic to stay still for it."
+      a: "We have an in house digital radiography machine. It's used for things like fractures, arthritis, spinal problems, checking for swallowed objects, bladder stones, and assessing hearts and lungs in coughing pets. Some pets need sedation or a general anaesthetic to stay still for it."
     },
     {
       kw: ["microchip", "chip my pet", "council registration"],
-      a: "Yes, we microchip pets. It's a quick injection between the shoulder blades, no anaesthesia needed. In Victoria, cats and dogs must be microchipped before registering with a council, a requirement since the 1st of May 2007. We use Central Animal Records as our registry."
+      a: "We microchip pets here. It's a quick injection between the shoulder blades, no anaesthesia needed. In Victoria, cats and dogs must be microchipped before registering with a council, a requirement since the 1st of May 2007. We use Central Animal Records as our registry."
     },
     {
       kw: ["health exam", "health check", "checkup", "check up", "wellness"],
-      a: "Yes, we recommend an annual health exam for most pets and twice yearly for senior pets. It can pick up things like dental disease, weight issues, skin conditions, heart murmurs, tumours, arthritis, and eye conditions early."
+      a: "We recommend an annual health exam for most pets and twice yearly for senior pets. It can pick up things like dental disease, weight issues, skin conditions, heart murmurs, tumours, arthritis, and eye conditions early."
     },
     {
       kw: ["desex", "spay", "neuter", "boarding", "dental", "flea", "worm", "nutrition", "weight loss", "slimmer", "ultrasound", "ultrasonography", "obedience", "surgery", "surgical"],
@@ -293,7 +292,46 @@
     }
   ];
 
+  // ---- Emergency / urgency detection, checked before anything else ----
+  var EMERGENCY_KW = [
+    "emergency", "urgent", "after hours", "after-hours", "outside your hours",
+    "closed and my pet", "not breathing", "isn't breathing", "isnt breathing",
+    "can't breathe", "cant breathe", "difficulty breathing", "struggling to breathe",
+    "collapsed", "collapse", "won't wake up", "wont wake up", "unconscious",
+    "bleeding", "poison", "poisoned", "toxic", "seizure", "fitting", "convulsing",
+    "hit by a car", "hit by car", "choking", "can't walk", "cant walk",
+    "paralysed", "paralyzed", "dying", "midnight", "2am", "3am", "4am"
+  ];
+  var EMERGENCY_RESPONSE = "This sounds like it could be an emergency, please seek immediate veterinary care. We're open Monday to Friday, 8:30am to 5:30pm, if it's outside those hours or you can't reach us, your nearest options are Advanced Vet Care in Kensington (03 9092 0400), CARE in Collingwood (03 9417 6417), Animal Referral Hospital in Essendon Fields (03 9379 0700), Lort Smith Animal Hospital in North Melbourne (03 9328 3021), or Bundoora Veterinary Hospital (03 9467 2255). If you can reach us during business hours, call " + PHONE + ".";
+
+  function isEmergency(t) {
+    for (var i = 0; i < EMERGENCY_KW.length; i++) {
+      if (t.indexOf(EMERGENCY_KW[i]) !== -1) return true;
+    }
+    return false;
+  }
+
+  // ---- Pet specific / case specific questions the bot can't answer generically ----
+  // These are not in the KB, but are also not "off topic", they're genuine
+  // questions about an individual pet that need a vet's judgement.
+  var PET_CASE_KW = [
+    "my dog", "my cat", "my pet", "my puppy", "my kitten", "my rabbit",
+    "ate", "eaten", "swallowed", "chocolate", "vomit", "throwing up",
+    "diarrhea", "diarrhoea", "limping", "won't eat", "wont eat", "not eating",
+    "lethargic", "sick", "unwell", "hurt", "injured", "injury", "rash",
+    "itchy", "itching", "scratching", "in pain", "bitten", "bit by",
+    "sting", "stung", "allergic", "allergy", "symptom", "behaviour", "behavior"
+  ];
+
+  function isPetCase(t) {
+    for (var i = 0; i < PET_CASE_KW.length; i++) {
+      if (t.indexOf(PET_CASE_KW[i]) !== -1) return true;
+    }
+    return false;
+  }
+
   var DEFLECT = "Good question, that's best confirmed by calling us directly on " + PHONE + ", especially for anything specific to your pet's case.";
+  var OFFTOPIC = "I can only help with questions about Heritage Veterinary Clinic, booking, hours, payments, vaccinations, X rays, microchipping, or our vets and nurses. Is there something in that list I can help with?";
 
   var QUICK_REPLIES = [
     "How do I book?",
@@ -302,15 +340,36 @@
     "Who are the vets?"
   ];
 
-  function findAnswer(text) {
-    var t = text.toLowerCase();
+  // Returns every distinct KB entry that matches, not just the first, so a
+  // two part question (e.g. "do you do x rays and microchipping") gets both
+  // answers instead of silently dropping the second topic.
+  function findAllAnswers(t) {
+    var matched = [];
     for (var i = 0; i < KB.length; i++) {
       var entry = KB[i];
       for (var j = 0; j < entry.kw.length; j++) {
-        if (t.indexOf(entry.kw[j]) !== -1) return entry.a;
+        if (t.indexOf(entry.kw[j]) !== -1) {
+          if (matched.indexOf(entry) === -1) matched.push(entry);
+          break;
+        }
       }
     }
-    return null;
+    return matched;
+  }
+
+  // Classifies the message and returns the reply text plus whether the
+  // suggestion chips should be re shown (they are, for off topic replies,
+  // so the person has an easy way back to a supported question).
+  function getResponse(text) {
+    var t = text.toLowerCase();
+    if (isEmergency(t)) return { text: EMERGENCY_RESPONSE, showChips: false };
+    var matches = findAllAnswers(t);
+    if (matches.length) {
+      var combined = matches.map(function(m) { return m.a; }).join("<br><br>");
+      return { text: combined, showChips: false };
+    }
+    if (isPetCase(t)) return { text: DEFLECT, showChips: false };
+    return { text: OFFTOPIC, showChips: true };
   }
 
   // ---- DOM refs ----
@@ -345,16 +404,27 @@
     bookMenu.classList.toggle('open');
   });
 
-  function showChat() {
+  var GREETING = "Hi! I'm the Heritage Veterinary Clinic Live Assistant. Ask me about booking, hours, vaccinations, X rays, microchipping, or our vets and nurses, for anything about your pet's specific case, I'll point you to give us a call.";
+
+  // Clears the conversation state and shows just the greeting and default
+  // chips, exactly like a fresh page load. Called every time "Start a new
+  // chat" is clicked, not just the first time the panel is opened.
+  function resetConversation() {
+    messages.innerHTML = '';
+    quickReplies.innerHTML = '';
+    addMsg('bot', GREETING);
+    renderQuickReplies();
+  }
+
+  function showChat(forceReset) {
     homeView.style.display = 'none';
     chatPanel.classList.add('open');
-    if (!messages.hasChildNodes()) {
-      addMsg('bot', "Hi! I'm the Heritage Veterinary Clinic Live Assistant. Ask me about booking, hours, vaccinations, X rays, microchipping, or our vets and nurses, for anything about your pet's specific case, I'll point you to give us a call.");
-      renderQuickReplies();
+    if (forceReset || !messages.hasChildNodes()) {
+      resetConversation();
     }
     input.focus();
   }
-  startChatBtn.addEventListener('click', showChat);
+  startChatBtn.addEventListener('click', function() { showChat(true); });
   backBtn.addEventListener('click', function() {
     chatPanel.classList.remove('open');
     homeView.style.display = 'flex';
@@ -384,8 +454,9 @@
     addMsg('user', text);
     input.value = '';
     setTimeout(function() {
-      var answer = findAnswer(text);
-      addMsg('bot', answer || DEFLECT);
+      var response = getResponse(text);
+      addMsg('bot', response.text);
+      if (response.showChips) renderQuickReplies();
     }, 350);
   }
 
